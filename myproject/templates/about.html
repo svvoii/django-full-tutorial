@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block title %}
+	<title>About</title>
+{% endblock %}
+
+{% block content %}
+
+	<h1>About</h1>
+	<p>Welcome to about page!</p>
+	<p>Check out the <a href="/">Home</a> page.</p>
+	{% comment %} <p>Check out the <a href="{% url 'about' %}">about page</a>.</p> {% endcomment %}
+
+{% endblock %}
