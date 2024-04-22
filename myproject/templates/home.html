@@ -1,4 +1,15 @@
-{% extends "base.html" %}
+{% extends "layout.html" %}
+
+{% block title %}
+	Home
+{% endblock %}
+
+{% block content %}
+	<h1>Home</h1>
+	<p>Check out the <a href="/about">About</a> page.</p>
+{% endblock %}
+
+{% comment %} {% extends "base.html" %}
 
 {% block title %}
 	<title>Home</title>
@@ -10,4 +21,4 @@
 	<p>Welcome to the home page!</p>
 	<p>Check out the <a href="/about">About</a> page.</p>
 
-{% endblock %}
+{% endblock %} {% endcomment %}
