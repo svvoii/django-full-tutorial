@@ -569,6 +569,98 @@ The last thing to add is to update the `post_page.html` file in the `myproject/p
 ```
 ..here we have added the `<img..>` tag that will render the image of the post.  
 
+## ADDING USERS APP:
+
+1) 
+As a recap what was done to creat4e `posts` app. We created a new app `users`:
+`python manage.py startapp users` - to create a new app (users here is a name for a new django app).  
+
+After this we need to add the `users` app to the `INSTALLED_APPS` list in the `settings.py` file of the `myproject` folder (`myproject/myproject/settings.py`):  
+
+```python
+...
+INSTALLED_APPS = [
+	...
+	'posts', # this is the app we created before
+	'users',
+]
+```
+
+2) 
+Next step is to add the `urls.py` file in the app folder (`myproject/users/urls.py`), which is similar to the `urls.py` file in the `posts` app folder with slight changes:  
+
+```python
+from django.urls import path
+from . import views
+
+app_name = 'users'
+
+urlpatterns = [
+	path('register/', views.register_view, name="register"),
+]
+```
+..`app_name = 'users'` is a namespace for the URL patterns, so it is easier to refer / identify the names of URL patterns used in the templates!!  
+
+3) 
+After this we also need to change the `urls.py` file in the project folder (`myproject/myproject/urls.py`) to include the URL patterns from the `users` app:  
+
+```python
+...
+urlpatterns = [
+    path('admin/', admin.site.urls),
+	path('', views.homepage),
+	path('about/', views.about),
+	path('posts/', include('posts.urls')),
+	path('users/', include('users.urls')), # this is the new line that includes the URL patterns from the users app
+]
+```
+..teh same way which was done for the `posts` app.  
+
+4) 
+Next step is to add the `views.py` file in the app folder, which will contain the view functions for the `users` app (`myproject/users/views.py`):  
+
+```python
+from django.shortcuts import render
+
+# The following function/method is specified in the `urls.py` as the second argument
+def register_view(request):
+	return render(request, 'users/register.html')
+
+```
+
+This will render the `register.html` template when the user visits the `/users/register/` URL. Which we will create as next step.  
+
+5) 
+In the similr way (as with the `posts` app) we create a new directory `templates` in the `users` app folder and another directory `users` inside the `templates` directory (`myproject/users/templates/users`).  
+This is where the `register.html` file will be created.  
+
+The file will contain the form that the user will use to register on the website `register.html`:  
+
+```html
+{% extends "layout.html" %}
+
+{% block title %}
+	Register a New User
+{% endblock %}
+
+{% block content %}
+	<section>
+		<h1>Register a New User !</h1>	
+	</section>
+{% endblock %}
+```
+..nothing fancy, similar to the `post_page.html` file.  
+
+After these steps we can run the server `python manage.py runserver` and visit the `../users/register/` URL to see the form that the user will use to register on the website.  
+
+We dont have the proper link to that page yet and we also need to add the registration functionality to the form.  
+
+This woll be done next.  
+
+## REGISTRATION FORM:  
+
+1) 
+
 
 (01:50:00)  
 

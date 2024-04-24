@@ -25,6 +25,7 @@ urlpatterns = [
 	path('', views.homepage),
 	path('about/', views.about),
 	path('posts/', include('posts.urls')),
+	path('users/', include('users.urls')),
 ]
 
 # Add media url to urlpatterns to tell django where to find them
