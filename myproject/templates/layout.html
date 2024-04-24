@@ -9,15 +9,24 @@
 			Django App
 		{% endblock %}
 	</title>
-	<link rel="stylesheet" type="text/css" href="{% static 'css/style.css' %}">
-	<script src="{% static 'js/script.js' %}" defer></script>
+	<link rel="stylesheet" href="{% static "css/style.css" %}">
+	<script src="{% static 'js/main.js' %}" defer></script>
 </head>
 <body>
 	<nav>
-		<a href="/">Home</a> |
-		<a href="/about">About</a> |
-		<a href="{% url 'posts:list' %}">Posts</a> |
-		{% comment %} <a href="/posts">Posts</a> | {% endcomment %}
+		<a href="/" title="HOME">Home</a> |
+		<a href="/about" title="ABOUT">About</a> |
+		<a href="{% url 'posts:list' %}" title="POSTS">Posts</a> |
+		{% if user.is_authenticated %}
+			<a href="{% url 'posts:new-post' %}" title="ADD POST">New Post</a> |
+			<form class="logout" action="{% url 'users:logout' %}" method="post">
+				{% csrf_token %}
+				<button class="logout-button" title="USER LOGOUT">Logout</button>
+			</form>
+		{% else %}
+			<a href="{% url 'users:register' %}" title="REGISTER">Registration</a> |
+			<a href="{% url 'users:login' %}" title="REGISTER">User Login</a>
+		{% endif %}
 	</nav>
 	<main>
 		{% block content %}

@@ -100,7 +100,7 @@ In the `templates` folder we can create a new HTML files to be used as templates
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<link rel="stylesheet" type="text/css" href="{% static 'css/style.css' %}">
+	<link rel="stylesheet" href="{% static 'css/style.css' %}">
 
 {% block title %}
 
@@ -165,7 +165,7 @@ Now for that to work we add the following to the `Home.html` file:
 <!DOCTYPE html>
 {% load static %}
 ...
-	<link rel="stylesheet" type="text/css" href="{% static 'css/style.css' %}">
+	<link rel="stylesheet" href="{% static 'css/style.css' %}">
 ...
 ```  
 </details>
@@ -192,7 +192,7 @@ in the `base.html` file we can add the `<script...>` and `<link..>` tags to link
 			Django App
 		{% endblock %}
 	</title>
-	<link rel="stylesheet" type="text/css" href="{% static 'css/style.css' %}">
+	<link rel="stylesheet" href="{% static 'css/style.css' %}">
 	<script src="{% static 'js/script.js' %}" defer></script>
 </head>
 <body>
@@ -640,12 +640,12 @@ The file will contain the form that the user will use to register on the website
 {% extends "layout.html" %}
 
 {% block title %}
-	Register a New User
+	Register New User
 {% endblock %}
 
 {% block content %}
 	<section>
-		<h1>Register a New User !</h1>	
+		<h1>Register New User !</h1>	
 	</section>
 {% endblock %}
 ```
@@ -660,8 +660,440 @@ This woll be done next.
 ## REGISTRATION FORM:  
 
 1) 
+To be able to use form in the `register.html` file need to add the following to the `forms.py` file in the `users` app folder (`myproject/users/forms.py`):  
+
+```python
+from django.shortcuts import render
+from django.contrib.auth.forms import UserCreationForm # This allows to use built-in form to create a new user
+
+def register_view(request):
+	form = UserCreationForm() # This is the form that we will use to create a new user
+	return render(request, 'users/register.html', { 'form': form })
+
+```
+Also, in a similar way as before we add 3rd argument to the `render` function that will pass the form to the template.  
+..`{ 'form': form }` is a dictionary that contains the key `form` and the value `form` which is the form that we will use to create a new user.  
+(will be adding more changes to this file later)..
+
+2) 
+Now we modify the `register.html` file in the `myproject/users/templates/users` folder to render the form:  
+
+```html
+{% extends "layout.html" %}
+
+{% block title %}
+	Register New User
+{% endblock %}
+
+{% block content %}
+	<section>
+		<h1>Register New User !</h1>	
+		<form class="form-with-validation" action="/users/register/" method="post">
+			{% csrf_token %}
+			{{ form }}
+			<button class="form-submit">Submit</button>
+		</form>
+	</section>
+{% endblock %}
+```  
+We have added the `<form..>` tag that will render the form.  
+..`{% csrf_token %}` is a template tag that adds a CSRF token to the form. It is a security feature that prevents Cross-Site Request Forgery attacks. Django requires this tag in all forms.  
+After this we can check the form in the browser if it renders correctly.  
+
+3) 
+Next we need to add the `POST` method to the `register_view` function in the `views.py` file in the `users` app folder (`myproject/users/views.py`):  
+
+```python
+from django.shortcuts import render, redirect
+from django.contrib.auth.forms import UserCreationForm # This is a built-in form that we can use to create a new user
+
+# The following function is specified in the `urls.py` as the second argument
+def register_view(request):
+	if request.method == 'POST':
+		form = UserCreationForm(request.POST)
+		if form.is_valid():
+			form.save()
+			return redirect('posts:list') # Redirect to the list of posts page after registration
+	else:
+		form = UserCreationForm()
+	return render(request, 'users/register.html', { 'form': form })
+```
+We first add `redirect` function from `django.shortcuts` on the top, to redirect the user to the list of posts page after registration.  
+And we set the condition that if the request method is `POST` we create a new instance of the `UserCreationForm` form with the data from the request.  
+At this point we can verify if the form is valid and if it is we save the form and redirect the user to the list of posts page.  
+We can also check if the new user is created in the admin panel (`localhost:8000/admin/`).  
+
+4) 
+Next lets add the link to the registration form, as a new `navbar` item to the `layout.html` file in the `myproject/templates` folder:  
+
+```html
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>
+		{% block title %}
+			Django App
+		{% endblock %}
+	</title>
+	<link rel="stylesheet" href="{% static "css/style.css" %}">
+	<script src="{% static 'js/main.js' %}" defer></script>
+</head>
+<body>
+	<nav>
+		<a href="/" title="HOME">Home</a> |
+		<a href="/about" title="ABOUT">About</a> |
+		<a href="{% url 'posts:list' %}" title="POSTS">Posts</a> |
+		<a href="{% url 'users:register' %}" title="REGISTER">Registration</a> |
+	</nav>
+	<main>
+		{% block content %}
+		{% endblock %}
+	</main>
+	
+</body>
+</html>
+```
+Here we have added another link to the `navbar` (Registration`), that will redirect the user to the registration form.  
+we also added `..title="..."` to all the links in the `navbar`. This will add a tooltip to the links, so when the user hovers over the link, the tooltip will appear with the respective text.  
+
+## LOGIN AND AUTHENTICATION:
+
+1) 
+To start with this part we reverse the order of steps and add the `login` link to the `navbar` in the same way as just above. So, in `layout.html` file in the `myproject/templates` folder, adding  the following line to the `nav` section:    
+
+```html
+...
+	<nav>
+		...
+		<a href="{% url 'users:login' %}" title="REGISTER">User Login</a> |
+	</nav>
+...	
+```
+
+2) 
+Next we add to the `urls.py` file the new URL pattern for the `login` page in the `users` app folder (`myproject/users/urls.py`):  
+
+```python
+from django.urls import path
+from . import views
+
+app_name = 'users'
+
+urlpatterns = [
+	path('register/', views.register_view, name="register"),
+	path('login/', views.login_view, name="login"), # this is the new URL pattern for the login page
+]
+```
+
+3) 
+Next we add the new view function `login_view` to the `views.py` file in the `users` app folder (`myproject/users/views.py`):  
+
+```python
+from django.shortcuts import render, redirect
+from django.contrib.auth.forms import UserCreationForm, AuthenticationForm # adding AuthenticationForm to the imports
+
+# The following function is specified in the `urls.py` as the second argument
+def register_view(request):
+	if request.method == 'POST':
+		form = UserCreationForm(request.POST)
+		if form.is_valid():
+			form.save()
+			return redirect('posts:list') # Redirect to the list of posts page after registration
+	else:
+		form = UserCreationForm()
+	return render(request, 'users/register.html', { 'form': form })
+
+# Adding new view function for the login page
+def login_view(request):
+	if request.method == 'POST':
+		form = AuthenticationForm(data=request.POST)
+		if form.is_valid():
+			# Log the user in
+			return redirect('posts:list')
+	else:
+		form = AuthenticationForm()
+	return render(request, 'users/login.html', { 'form': form })
+```
+
+4) 
+Next we add the new template `login.html` file in the `myproject/users/templates/users` folder to render the login form, which is almost the same as the `register.html` file:  
+
+```html
+{% extends "layout.html" %}
+
+{% block title %}
+	User Login
+{% endblock %}
+
+{% block content %}
+	<section>
+		<h1>User Login</h1>	
+		<form class="form-with-validation" action="/users/login/" method="post">
+			{% csrf_token %}
+			{{ form }}
+			<button class="form-submit">Submit</button>
+		</form>
+	</section>
+{% endblock %}
+```
+
+5) 
+Next we going to change the `views.py` file in the `users` app folder (`myproject/users/views.py`) a bit to add the login functionality. This is how the `views.py` file should look like:    
+
+```python
+from django.shortcuts import render, redirect
+from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
+from django.contrib.auth import login # Adding a built-in function that we can use to log a user in `login(request, user)`
+
+def register_view(request):
+	if request.method == 'POST':
+		form = UserCreationForm(request.POST)
+		if form.is_valid():
+			login(request, form.save()) # Changing how the user is logged in
+			return redirect('posts:list')
+	else:
+		form = UserCreationForm()
+	return render(request, 'users/register.html', { 'form': form })
+
+def login_view(request):
+	if request.method == 'POST':
+		form = AuthenticationForm(data=request.POST)
+		if form.is_valid():
+			login(request, form.get_user()) # adding the `login` function to log the user in
+			return redirect('posts:list')
+	else:
+		form = AuthenticationForm()
+	return render(request, 'users/login.html', { 'form': form })
+```
+
+At this point we can verify whether the intended logic is working in the browser. The user should be able to register and login (if exist, and credentials are correct). Otherwise the error message will be displayed.    
+When successful, the user will be redirected to the list of posts page.  
+
+## AUTHORIZATION AND LOGOUT:
+
+1) 
+In `urls.py` file in the `users` app folder (`myproject/users/urls.py`) we add the new URL pattern for the `logout` page:  
+
+```python
+...
+urlpatterns = [
+	path('register/', views.register_view, name="register"),
+	path('login/', views.login_view, name="login"),
+	path('logout/', views.logout_view, name="logout"), # this is the new URL pattern for the logout page
+]
+```
+2) 
+In the `views.py` file in the `users` app folder (`myproject/users/views.py`) we add the new view function `logout_view` to handle the logout functionality:  
+
+```python
+...
+from django.contrib.auth import login, logout # These are built-in functions that used to log a user in out `login(request, user)`, `logout(request)`
+...
+# adding new view function for the logout page
+def logout_view(request):
+	if request.method == 'POST':
+		logout(request)
+		return redirect('posts:list')
+```
+
+3) 
+As before, adding another entry (this time it is a `form` tag) to the `navbar` in the `layout.html` file in the `myproject/templates` folder:  
+
+```html
+...
+	<nav>
+		<a href="/" title="HOME">Home</a> |
+		<a href="/about" title="ABOUT">About</a> |
+		<a href="{% url 'posts:list' %}" title="POSTS">Posts</a> |
+		<a href="{% url 'users:register' %}" title="REGISTER">Registration</a> |
+		<a href="{% url 'users:login' %}" title="REGISTER">User Login</a> |
+		<form class="logout" action="{% url 'users:logout' %}" method="post">
+			{% csrf_token %}
+			<button class="logout-button" title="USER LOGOUT">Logout</button>
+		</form>
+	</nav>
+...
+```
+..adding `<form..>` tag to the `navbar` that will render the logout button.  
+
+4) 
+Next we add the functionality which will allow the user to add new posts only if the user is register / logged in.  
+
+In the `urls.py` file in the `posts` app folder (`myproject/posts/urls.py`) we add the new URL pattern for the `new` page:  
+
+```python
+from django.urls import path
+from . import views
+
+app_name = 'posts'
+
+urlpatterns = [
+	path('', views.posts_list, name="list"),
+	path('new-post/', views.posts_new, name="new-post"), # adding new pattern here for the new post
+	path('<slug:slug>/', views.post_page, name="page"),
+]
+```
+
+5) 
+In the `views.py` file in the `posts` app folder (`myproject/posts/views.py`) we add the new view function `posts_new` to handle the new post functionality:  
+
+```python
+...	
+# adding new view function for the new post in the end of the file:
+def post_new(request):
+	return render(request, 'posts/post_new.html')
+...
+```
+
+6) 
+Now we ned to add the new template `post_new.html` file in the `myproject/posts/templates/posts` folder to render the form that the user will use to create a new post, super simple:  
+
+```html
+{% extends "layout.html" %}
+
+{% block title %}
+	New Post
+{% endblock %}
+
+{% block content %}
+	<section>
+		<h1>New Post</h1>
+	</section>
+{% endblock %}
+```
+
+7) 
+Then we add new link to the `navbar` in the `layout.html` file in the `myproject/templates` folder:  
+
+```html
+...
+	<nav>
+		<a href="/" title="HOME">Home</a> |
+		<a href="/about" title="ABOUT">About</a> |
+		<a href="{% url 'posts:list' %}" title="POSTS">Posts</a> |
+		<a href="{% url 'users:register' %}" title="REGISTER">Registration</a> |
+		<a href="{% url 'users:login' %}" title="REGISTER">User Login</a> |
+		<a href="{% url 'posts:new-post' %}" title="ADD POST">New Post</a> |
+		<form class="logout" action="{% url 'users:logout' %}" method="post">
+			{% csrf_token %}
+			<button class="logout-button" title="USER LOGOUT">Logout</button>
+		</form>
+	</nav>
+...
+```
+..adding right before the logout button the link to the `new-post` page.  
+
+After these additions anyone can add new posts to the website. To protect the website from unauthorized users we need to add the `login_required` decorator to the `posts_new` view function in the `views.py` file in the `posts` app folder (`myproject/posts/views.py`).  
+So, back to `views.py` file in (`myproject/posts/views.py`):    
+
+```python
+from django.shortcuts import render
+from .models import Post
+from django.contrib.auth.decorators import login_required # this will import the login_required decorator for the post_new view to be accessible only to logged in users
+
+def posts_list(request):
+	posts = Post.objects.all().order_by('-date')
+	return render(request, 'posts/posts_list.html', { 'posts': posts })
+
+def post_page(request, slug):
+	post = Post.objects.get(slug=slug)
+	return render(request, 'posts/post_page.html', { 'post': post }) 
+	
+# this will make the post_new view accessible only to logged in users (if the user is not logged in, it will redirect to the login page
+@login_required(login_url='/users/login/')
+def post_new(request):
+	return render(request, 'posts/post_new.html')
+```
+
+At this point the user will be redirected to the login page if the user is not logged in.  
+That should work and we can test this in the browser.  
+
+8) 
+Another change we would want to make is when the `User` is not logged in and clicks `New Post`, so that after credentials are entered and the user get redirected to the `New Post` page.  
+To do this we need to add the `next` parameter to the login form in the `login.html` file in the `myproject/users/templates/users` folder:  
+
+```html
+{% extends "layout.html" %}
+
+{% block title %}
+	User Login	
+{% endblock %}
+
+{% block content %}
+	<section>
+		<h1>User Login !</h1>	
+		<form class="form-with-validation" action="/users/login/" method="post">
+			{% csrf_token %}
+			{{ form }}
+			{% if request.GET.next %}
+				<input type="hidden" name="next" value="{{ request.GET.next }}">
+			{% endif %}
+			<button class="form-submit">Submit</button>
+		</form>
+	</section>
+{% endblock %}
+``` 
+..we add the `{% if request.GET.next %}` template tag that checks if the `next` parameter is in the URL.  
+
+9) 
+Next we need to update the `login_view` function in the `views.py` file in the `users` app folder (`myproject/users/views.py`) to redirect the user to the `next` page after the user is logged in:  
+
+```python
+...
+# in the login_view function we add the following line to redirect the user to the next page after the user is logged in (if the next page is specified)
+def login_view(request):
+	if request.method == 'POST':
+		form = AuthenticationForm(data=request.POST)
+		if form.is_valid():
+			login(request, form.get_user())
+			# Adding the following, this will check if the next parameter is in the POST request, so the user will be redirected to the next page after the user is logged in
+			if 'next' in request.POST:
+				return redirect(request.POST.get('next'))
+			else:
+				return redirect('posts:list')
+	else:
+		form = AuthenticationForm()
+	return render(request, 'users/login.html', { 'form': form })
+...
+```
+
+This condition should redirect the user based on the `next` parameter in the URL.  
+
+10) 
+Another useful functionality will be add the condition to which links will be displayed in the `navbar` based on the user's authentication status.  
+
+So, in the `layout.html` file in the `myproject/templates` folder we add the following condition to the `navbar`.  
+This is how `navbar` should look like in the `layout.html` file:  
+
+```html
+...
+	<nav>
+		<a href="/" title="HOME">Home</a> |
+		<a href="/about" title="ABOUT">About</a> |
+		<a href="{% url 'posts:list' %}" title="POSTS">Posts</a> |
+		{% if user.is_authenticated %}
+			<a href="{% url 'posts:new-post' %}" title="ADD POST">New Post</a> |
+			<form class="logout" action="{% url 'users:logout' %}" method="post">
+				{% csrf_token %}
+				<button class="logout-button" title="USER LOGOUT">Logout</button>
+			</form>
+		{% else %}
+			<a href="{% url 'users:register' %}" title="REGISTER">Registration</a> |
+			<a href="{% url 'users:login' %}" title="REGISTER">User Login</a>
+		{% endif %}
+	</nav>
+...
+```
+
+This will display the `New Post` and `Logout` links only if the user is authenticated. And the `Registration` and `User Login` links will be displayed only if the user is not authenticated.  
+
+## CUSTOM FORMS:
 
 
-(01:50:00)  
+
+(02:53:00)  
 
 
