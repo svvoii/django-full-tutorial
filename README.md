@@ -1,4 +1,18 @@
-## This is how I mastered Django (all-in-one tutorial)
+## This is how I mastered Django
+##### (all-in-one tutorial)
+
+This, follow-along, tutorial provides a comprehensive guide to mastering Django.  
+It starts with basic setup instructions, including creating and activating a virtual environment, installing Django, and managing Django apps.  
+It then moves on to creating a new Django project and running the server. The tutorial explains the role of `urls.py` and `views.py` files in mapping URLs to views, and how to add new URL patterns and define view functions.   
+
+It also explains the Django templates, how to create a new template and add its path to the `settings.py` file.  
+This tutorial serves as a solid foundation for Django beginners.  
+
+By the end of this tutorial, learners will have a fully functional Django web application, similar to a blog-post platform.   
+
+The application will have key features such as user registration, login, and logout. Users will also be able to create new posts, complete with a title, body, and banner image. 
+
+This tutorial also delves into database interactions, demonstrating how to create custom forms for the `Post` model and how to handle form validation. Additionally, it touches on the Django admin panel, a powerful tool for managing the application's content.  
 
 ### BASIC FIRST STEPS AND CHECKS:
 
@@ -1092,8 +1106,212 @@ This will display the `New Post` and `Logout` links only if the user is authenti
 
 ## CUSTOM FORMS:
 
+In this part we will create a custom form for the `Post` model. So that users can add new posts with the title, body and banner image.  
 
+1) 
+First we need to create a new file `forms.py` in the `posts` app folder (`myproject/posts/forms.py`):  
 
-(02:53:00)  
+```python
+from django import forms # importing the forms module from django
+from . import models # importing the models module from the current directory
 
+class CreatePost(forms.ModelForm):
+	class Meta:
+		model = models.Post
+		fields = ['title', 'body', 'slug', 'banner']
+```
+
+In here we refering to the `Post` model from the `models.py` file in the `posts` app folder (same directory).  
+
+2) 
+Next we need to update the `views.py` file in the `posts` app folder (`myproject/posts/views.py`), same directory, and add the following:
+
+```python
+...
+from . import forms # this will import the forms.py file from the current directory
+...
+# changing the post_new view function to use the custom form
+@login_required(login_url='/users/login/')
+def post_new(request):
+	form = forms.CreatePost() # adding the custom form to the post_new view function
+	return render(request, 'posts/post_new.html', { 'form': form }) # adding the last argument to the render function
+
+```
+
+So, in `post_new` view function we create a new instance of the `CreatePost` form and pass it to the `post_new.html` template.  
+
+3) 
+Next we need to update the `post_new.html` file in the `myproject/posts/templates/posts` folder to render the custom form:  
+
+```html
+...
+<section>
+<h1>New Post</h1>
+<form class="form-with-validation" action="{% url 'posts:new-post' %}" method="post" enctype="multipart/form-data">
+	{% csrf_token %}
+	{{ form }}
+	<button class="form-submit">Add Post</button>	
+</form>
+</section>
+...
+```
+..with {% url 'posts:new-post' %} we refer to the URL pattern with the name `new-post` defined in the `urls.py` file in the `posts` app (same directory).  
+
+4) 
+Next we will uodate the model in the `models.py` file in the `posts` app folder (`myproject/posts/models.py`) to add the `author` field to the `Post` model:  
+
+```python
+from django.db import models
+from django.contrib.auth.models import User # adding this, it will import the User model from django.contrib.auth.models
+
+# Create your models here.
+class Post(models.Model):
+	title = models.CharField(max_length=100)
+	body = models.TextField()
+	slug = models.SlugField()
+	date = models.DateTimeField(auto_now_add=True)
+	banner = models.ImageField(default='default.jpeg', blank=True)
+	# adding the author field to the Post model
+	author = models.ForeignKey(User, on_delete=models.CASCADE, default=None) # this will create a foreign key to the User model (on_delete=models.CASCADE will delete the post if the user is deleted)
+
+	def __str__(self):
+		return self.title
+```
+Once this is done we need to run the migrations!!:  
+
+`python manage.py makemigrations` - to create new migrations based on the changes made to the cusom models, created by the user.  
+
+`python manage.py migrate` - to apply the new migrations to the database.  
+
+5) 
+We also can modify the `posts_list.html` file in the `myproject/posts/templates/posts` folder to display the author of the post. Changing this line `<p>{{ post.date }}</p>` to this:  
+
+```html
+<p>{{ post.date }} by {{ post.author }}</p>
+```
+
+6) 
+Next we need to update the `views.py` file in the `posts` app folder (`myproject/posts/views.py`) to handle the logic form submission:  
+This is how the code in the file is going to look like:    
+
+```python
+from django.shortcuts import render, redirect # adding the redirect function to the imports
+from .models import Post
+from django.contrib.auth.decorators import login_required
+from . import forms
+
+def posts_list(request):
+	posts = Post.objects.all().order_by('-date')
+	return render(request, 'posts/posts_list.html', { 'posts': posts })
+
+def post_page(request, slug):
+	post = Post.objects.get(slug=slug)
+	return render(request, 'posts/post_page.html', { 'post': post })
+	
+
+@login_required(login_url='/users/login/')
+def post_new(request):
+	# adding the following condition to handle the form submission
+	if request.method == 'POST':
+		form = forms.CreatePost(request.POST, request.FILES)
+		if form.is_valid():
+			newpost = form.save(commit=False)
+			newpost.author = request.user
+			newpost.save()
+			return redirect('posts:list') # this will redirect to the posts list page
+	else:
+		form = forms.CreatePost()
+	return render(request, 'posts/post_new.html', { 'form': form }) # this will render the request to the template posts_new.html
+
+```
+
+This will handle the form submission and save the new post to the database. The author name shall be visible within each post.  
+
+## BEFORE DEPLOYMENT:
+
+We will change some settings in the `settings.py` file in the `myproject/myproject` folder to prepare the project for deployment.  
+We also change how the static files are served as well as updating the links to those files in the templates.  
+
+1) 
+First we change the `settings.py` file in the `myproject/myproject` folder to include the following lines:  
+
+```python
+...
+# remove this import from the top of the file:
+import os
+...
+# changing this to `False` will disable the debug mode:
+DEBUG = False
+# also we add the following to `ALLOWED_HOSTS` list:  
+ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
+
+# in the end of the file we change the following `STATIC_URL`, `MEDIA_URL` and `STATICFILES_DIRS` also add `STATIC_ROOT` into the `static files section of the settings file:  
+STATIC_URL = 'static/'
+MEDIA_URL = 'media/'
+
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+MEDIA_ROOT = BASE_DIR / 'media'
+
+STATICFILES_DIRS = [
+	BASE_DIR / "static",
+]
+...
+```
+2) 
+After this we need to run the following command to collect all the static files in the `staticfiles` folder:  
+
+`python manage.py collectstatic` - to collect all the static files in the `staticfiles` folder.  
+
+Something like this will be displayed in the terminal after running that command: `128 static files copied to '/sgoinfre/goinfre/Perso/sbocanci/django-full-tutorial/myproject/staticfiles'.`  
+Also the `staticfiles` folder will be created in the root of the project folder.  
+
+3) 
+Next we need to update the links to the static files in the templates. First we go to `urls.py` file in the project folder (`myproject/myproject/urls.py`) and add the following line to the `urlpatterns` list:  
+This is how the file should look like:  
+
+```python
+from django.contrib import admin
+from django.urls import path, include, re_path # adding the re_path function to the imports
+from . import views
+from django.conf.urls.static import static
+from django.conf import settings
+from django.views.static import serve # adding the serve function to the imports
+
+urlpatterns = [
+	# adding 2 new lines to the urlpatterns whch uses the regular expression to serve the static and media files
+	re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
+	re_path(r'^static/(?P<path>.*)$', serve, {'document_root': settings.STATIC_ROOT}),
+    path('admin/', admin.site.urls),
+	path('', views.homepage),
+	path('about/', views.about),
+	path('posts/', include('posts.urls')),
+	path('users/', include('users.urls')),
+]
+
+# REMOVING the following line since we are not using the static function to serve the static files anymore
+# urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+```
+..here we use regular expressions to serve the static and media files for the project.  
+
+4) 
+Another minor change is to spesify the `action` attribute in the `form` tag in the `login.html` file in the `myproject/users/templates/users` folder. Changing this: `... action="/users/login/" ... to this:  
+
+```html
+...
+<form class="form-with-validation" action="{% url 'users:login' %}" method="post">
+...
+```
+
+Same change in the `register.html` file in the `myproject/users/templates/users` folder:  
+
+```html
+...
+<form class="form-with-validation" action="{% url 'users: register' %}" method="post">
+...
+```
+
+## THE END.
+
+Thanks to the author of the tutorial for the great content and explanations.  
+Credit to [Dave Gray](https://github.com/gitdagray) for the tutorial.  
 
