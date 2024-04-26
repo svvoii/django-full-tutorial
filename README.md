@@ -1306,7 +1306,7 @@ Same change in the `register.html` file in the `myproject/users/templates/users`
 
 ```html
 ...
-<form class="form-with-validation" action="{% url 'users: register' %}" method="post">
+<form class="form-with-validation" action="{% url 'users:register' %}" method="post">
 ...
 ```
 
